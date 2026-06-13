@@ -12,7 +12,7 @@ src_root = Path(SPECPATH) / "src"
 fw_datas, fw_binaries, fw_hiddenimports = collect_all("faster_whisper")
 
 a = Analysis(
-    [str(src_root / "whisper_dictation" / "main.py")],
+    [str(Path(SPECPATH) / "run.py")],
     pathex=[str(src_root)],
     binaries=fw_binaries,
     datas=[
@@ -30,6 +30,8 @@ a = Analysis(
         "whisper_dictation.tray",
         "whisper_dictation.updater",
         "whisper_dictation.startup",
+        "whisper_dictation.settings_ui",
+        "whisper_dictation.main",
         "faster_whisper",
         "sounddevice",
         "numpy",
@@ -40,6 +42,9 @@ a = Analysis(
         "pyautogui",
         "winreg",
         "ctypes",
+        "tkinter",
+        "tkinter.ttk",
+        "tkinter.messagebox",
         *fw_hiddenimports,
     ],
     hookspath=[],
