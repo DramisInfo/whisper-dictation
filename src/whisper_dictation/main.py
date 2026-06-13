@@ -8,6 +8,7 @@ from typing import Optional
 
 from . import config as cfg
 from . import startup
+from . import updater
 from .hotkey import HotkeyManager
 from .recorder import Recorder, RecordingError
 from .transcriber import Transcriber
@@ -38,6 +39,7 @@ class App:
         )
         self._stopping = False
         self._transcribe_thread: Optional[threading.Thread] = None
+        updater.run_update_check_async()
 
     # ------------------------------------------------------------------
     # Hotkey callbacks (called from keyboard listener thread)
@@ -95,6 +97,9 @@ class App:
 
 
 def main() -> None:
+    if "--unregister-autostart" in sys.argv:
+        startup.disable_autostart()
+        return
     try:
         app = App()
         app.run()

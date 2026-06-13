@@ -4,6 +4,18 @@ Free Windows 11 push-to-talk voice dictation using local Whisper AI — no subsc
 
 ---
 
+## Download & Install
+
+1. Go to the [Releases page](https://github.com/DramisInfo/whisper-dictation/releases)
+2. Download `WhisperDictation-Setup-x.x.x.exe`
+3. Run it — done
+
+> **No administrator rights required.** The installer runs entirely in user space.
+
+> **Auto-updates:** When a new version is available, the app shows a notification in the background. Click **Yes** to open the download page.
+
+---
+
 ## English
 
 ### Requirements
@@ -45,6 +57,7 @@ A small **white circle** appears in the system tray.
 | **Right-click tray** → Start with Windows ✓ | Toggles auto-startup on/off |
 | **Right-click tray** → Settings | Opens `config.yaml` in Notepad |
 | **Right-click tray** → Quit | Exits the app |
+| Update notification (background) | Click **Yes** to open the download page for the new version |
 
 > **Auto-startup:** Enabled by default. The app registers itself under  
 > `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` — no administrator rights required.  
@@ -116,6 +129,7 @@ Une petite **icône blanche** apparaît dans la barre des tâches (zone de notif
 | **Clic droit** → Démarrer avec Windows ✓ | Active ou désactive le démarrage automatique |
 | **Clic droit** → Paramètres | Ouvre `config.yaml` dans le Bloc-notes |
 | **Clic droit** → Quitter | Ferme l'application |
+| Notification de mise à jour (arrière-plan) | Cliquer **Oui** ouvre la page de téléchargement de la nouvelle version |
 
 > **Démarrage automatique :** Activé par défaut. L'application s'enregistre dans  
 > `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` — aucun droit administrateur requis.  

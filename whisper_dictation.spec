@@ -1,20 +1,24 @@
-# PyInstaller spec for whisper-dictation — produces a single Windows .exe
+# PyInstaller spec for whisper-dictation — onedir Windows build
 # Usage: pyinstaller whisper_dictation.spec
+# Output: dist\whisper-dictation\
 
-import sys
 from pathlib import Path
+from PyInstaller.utils.hooks import collect_all
 
 block_cipher = None
 
 src_root = Path(SPECPATH) / "src"
 
+fw_datas, fw_binaries, fw_hiddenimports = collect_all("faster_whisper")
+
 a = Analysis(
     [str(src_root / "whisper_dictation" / "main.py")],
     pathex=[str(src_root)],
-    binaries=[],
+    binaries=fw_binaries,
     datas=[
-        # Bundle the default config so first-run seeding works offline
         ("config.default.yaml", "."),
+        ("assets/icon.ico", "assets"),
+        *fw_datas,
     ],
     hiddenimports=[
         "whisper_dictation",
@@ -24,6 +28,8 @@ a = Analysis(
         "whisper_dictation.injector",
         "whisper_dictation.hotkey",
         "whisper_dictation.tray",
+        "whisper_dictation.updater",
+        "whisper_dictation.startup",
         "faster_whisper",
         "sounddevice",
         "numpy",
@@ -32,7 +38,9 @@ a = Analysis(
         "pystray",
         "PIL",
         "pyautogui",
-        "yaml",
+        "winreg",
+        "ctypes",
+        *fw_hiddenimports,
     ],
     hookspath=[],
     hooksconfig={},
@@ -49,22 +57,30 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
     [],
+    exclude_binaries=True,
     name="whisper-dictation",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
     upx_exclude=[],
-    runtime_tmpdir=None,
-    console=False,          # No terminal window on Windows
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,              # Set to an .ico path if desired
+    icon="assets/icon.ico",
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name="whisper-dictation",
 )
