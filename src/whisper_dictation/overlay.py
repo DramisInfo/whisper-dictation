@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ctypes
+import ctypes.wintypes
 import random
 import threading
 import tkinter as tk
@@ -13,6 +15,13 @@ _BG_PILL = "#2d2d2d"
 _ALPHA = 0.82
 _RADIUS = 8
 _DEFAULT_X = 165
+
+# Win32 constants for forcing always-on-top above taskbar
+_HWND_TOPMOST = -1
+_SWP_NOSIZE = 0x0001
+_SWP_NOMOVE = 0x0002
+_SWP_NOACTIVATE = 0x0010
+_SWP_FLAGS = _SWP_NOSIZE | _SWP_NOMOVE | _SWP_NOACTIVATE
 
 # Equalizer bar geometry
 _N_BARS = 6
@@ -70,7 +79,26 @@ class Overlay:
 
         self._apply_state()
         self._animate()
+        self._enforce_topmost()  # start periodic Win32 topmost enforcement
         root.mainloop()
+
+    def _enforce_topmost(self) -> None:
+        """Re-assert Win32 HWND_TOPMOST every 500ms — survives taskbar clicks."""
+        root = self._root
+        if root is None:
+            return
+        try:
+            import sys
+            if sys.platform == "win32":
+                hwnd = ctypes.windll.user32.GetParent(root.winfo_id())
+                if hwnd == 0:
+                    hwnd = root.winfo_id()
+                ctypes.windll.user32.SetWindowPos(
+                    hwnd, _HWND_TOPMOST, 0, 0, 0, 0, _SWP_FLAGS
+                )
+        except Exception:
+            pass
+        root.after(500, self._enforce_topmost)
 
     def _draw_pill(self, canvas: tk.Canvas) -> None:
         r, fill = _RADIUS, _BG_PILL
