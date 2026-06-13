@@ -18,7 +18,8 @@ AppPublisher={#AppPublisher}
 AppPublisherURL=https://github.com/DramisInfo/whisper-dictation
 AppSupportURL=https://github.com/DramisInfo/whisper-dictation/issues
 AppUpdatesURL=https://github.com/DramisInfo/whisper-dictation/releases
-DefaultDirName={autopf}\WhisperDictation
+DefaultDirName={localappdata}\WhisperDictation
+PrivilegesRequiredOverridesAllowed=dialog
 DefaultGroupName={#AppName}
 PrivilegesRequired=lowest
 OutputDir=output
@@ -42,7 +43,7 @@ Source: "..\dist\whisper-dictation\*"; DestDir: "{app}"; Flags: ignoreversion re
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
-Name: "{commondesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
+Name: "{userdesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
