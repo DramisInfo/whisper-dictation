@@ -21,9 +21,9 @@ AppUpdatesURL=https://github.com/DramisInfo/whisper-dictation/releases
 DefaultDirName={autopf}\WhisperDictation
 DefaultGroupName={#AppName}
 PrivilegesRequired=lowest
-OutputDir=installer\output
+OutputDir=output
 OutputBaseFilename=WhisperDictation-Setup-{#AppVersion}
-SetupIconFile=assets\icon.ico
+SetupIconFile=..\assets\icon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -37,7 +37,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "dist\whisper-dictation\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\whisper-dictation\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
