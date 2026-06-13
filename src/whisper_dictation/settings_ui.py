@@ -176,6 +176,9 @@ class SettingsWindow:
         hk_label.pack(fill="x")
 
         def _start_capture(e=None) -> None:
+            # Use keyboard library in thread to capture Win key combos
+            import keyboard as _kb
+            import threading as _threading
             if _capturing[0]:
                 return
             _capturing[0] = True
@@ -184,22 +187,33 @@ class SettingsWindow:
             hk_label.config(fg=_ACCENT)
             root.focus_set()
 
+            def _capture_thread():
+                try:
+                    combo = _kb.read_hotkey(suppress=False)
+                    # Normalize: keyboard returns e.g. "ctrl+windows" or "windows+ctrl"
+                    parts = [p.strip().lower() for p in combo.split("+")]
+                    # Put modifiers first
+                    mods = [p for p in parts if p in ("ctrl","shift","alt","windows","win")]
+                    rest = [p for p in parts if p not in mods]
+                    normalized = "+".join(mods + rest)
+                    root.after(0, lambda: _apply_capture(normalized))
+                except Exception:
+                    root.after(0, lambda: _apply_capture(cur_hotkey))
+
+            def _apply_capture(combo: str) -> None:
+                _capturing[0] = False
+                hotkey_var.set(combo)
+                hk_label.config(fg=_FG)
+                _pressed.clear()
+
+            _threading.Thread(target=_capture_thread, daemon=True).start()
+
         def _on_key_press(e: tk.Event) -> None:  # type: ignore[return]
-            if not _capturing[0]:
-                return
-            name = _tk_to_name(e)
-            if name and name != "??":
-                _pressed.add(name)
+            # Fallback tkinter handler — only fires for non-Win keys
+            # The keyboard-lib thread handles the actual capture
             return "break"  # type: ignore[return-value]
 
         def _on_key_release(e: tk.Event) -> None:  # type: ignore[return]
-            if not _capturing[0]:
-                return
-            _capturing[0] = False
-            combo = _combo_from_set(_pressed) if _pressed else cur_hotkey
-            hotkey_var.set(combo)
-            hk_label.config(fg=_FG)
-            _pressed.clear()
             return "break"  # type: ignore[return-value]
 
         for w in (hk_frame, hk_label):
