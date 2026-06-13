@@ -50,3 +50,8 @@ class HotkeyManager:
                 pass
         self._hooks.clear()
         self._held = False
+
+    def restart(self, new_hotkey: str) -> None:
+        self.stop()
+        self._hotkey = new_hotkey
+        self.start()

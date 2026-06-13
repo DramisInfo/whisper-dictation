@@ -14,6 +14,7 @@ from .recorder import Recorder, RecordingError
 from .transcriber import Transcriber
 from .injector import inject
 from .tray import TrayIcon
+from .settings_ui import SettingsWindow
 
 
 class App:
@@ -28,8 +29,9 @@ class App:
             model_size=self._conf["model"],
             language=self._conf.get("language"),
         )
+        self._settings_window = SettingsWindow(self._conf, self._on_settings_save)
         self._tray = TrayIcon(
-            on_settings=self._open_settings,
+            on_settings=self._settings_window.show,
             on_quit=self._quit,
         )
         self._hotkey_mgr = HotkeyManager(
@@ -78,8 +80,19 @@ class App:
     # Tray menu actions
     # ------------------------------------------------------------------
 
-    def _open_settings(self) -> None:
-        cfg.open_in_editor()
+    def _on_settings_save(self, new_config: dict) -> None:
+        old_hotkey = self._conf.get("hotkey")
+        old_autostart = self._conf.get("autostart")
+        cfg.save(new_config)
+        self._conf = new_config
+        self._settings_window._config = new_config
+        if new_config.get("hotkey") != old_hotkey:
+            self._hotkey_mgr.restart(new_config["hotkey"])
+        if new_config.get("autostart") != old_autostart:
+            if new_config.get("autostart"):
+                startup.enable_autostart()
+            else:
+                startup.disable_autostart()
 
     def _quit(self) -> None:
         self._stopping = True

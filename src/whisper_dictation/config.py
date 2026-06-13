@@ -65,6 +65,13 @@ def load() -> dict[str, Any]:
     return {**_DEFAULTS, **data}
 
 
+def save(data: dict) -> None:
+    config_path().write_text(
+        yaml.dump(data, default_flow_style=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+
 def open_in_editor() -> None:
     """Open config.yaml in the default system editor (Windows: notepad)."""
     import subprocess

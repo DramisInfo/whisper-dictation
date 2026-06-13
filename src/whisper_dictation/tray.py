@@ -1,4 +1,4 @@
-"""System tray icon — white circle = idle, red circle = recording."""
+"""System tray icon — microphone shape, dark-grey bg = idle, red bg = recording."""
 
 from __future__ import annotations
 
@@ -17,14 +17,28 @@ _ICON_SIZE = 64
 def _make_icon(recording: bool) -> Image.Image:
     img = Image.new("RGBA", (_ICON_SIZE, _ICON_SIZE), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    color = (220, 50, 50, 255) if recording else (240, 240, 240, 255)
-    margin = 4
-    draw.ellipse(
-        [margin, margin, _ICON_SIZE - margin, _ICON_SIZE - margin],
-        fill=color,
-        outline=(80, 80, 80, 200),
-        width=2,
-    )
+
+    # Background circle
+    bg = (220, 50, 50, 255) if recording else (50, 50, 50, 255)
+    draw.ellipse([4, 4, 60, 60], fill=bg)
+
+    # Microphone elements in white
+    w = (255, 255, 255, 255)
+
+    # Capsule body — fully rounded rectangle (pill shape)
+    draw.rounded_rectangle([24, 8, 40, 32], radius=8, fill=w)
+
+    # Stand arc (∪ shape) — bounding box chosen so endpoints land at y=32,
+    # matching the bottom of the capsule, with the arc curving down to y=46.
+    # center_y = (18+46)/2 = 32  →  arc(0°→180°) endpoints sit at y=32.
+    draw.arc([20, 18, 44, 46], start=0, end=180, fill=w, width=3)
+
+    # Vertical stem from arc bottom to base
+    draw.line([(32, 46), (32, 52)], fill=w, width=3)
+
+    # Horizontal base
+    draw.line([(22, 52), (42, 52)], fill=w, width=3)
+
     return img
 
 
