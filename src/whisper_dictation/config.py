@@ -17,7 +17,7 @@ _DEFAULTS: dict[str, Any] = {
     "hotkey": "ctrl+windows",
     "model": "small",
     "language": "fr",
-    "initial_prompt": "Transcription en français. Vocabulaire informatique et technologique.",
+    "initial_prompt": "Transcription en français québécois. Vocabulaire informatique, développement logiciel, intelligence artificielle, architecture de solutions.",
     "autostart": True,
     "device": None,
     "overlay_x": 165,

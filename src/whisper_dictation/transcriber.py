@@ -46,7 +46,10 @@ class Transcriber:
         segments, _info = self._model.transcribe(
             audio,
             language=self._language,
-            beam_size=5,
+            beam_size=8,
+            best_of=5,
+            temperature=0.0,
+            condition_on_previous_text=False,
             vad_filter=True,
             initial_prompt=self._initial_prompt,
         )
