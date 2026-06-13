@@ -18,6 +18,7 @@ _DEFAULTS: dict[str, Any] = {
     "model": "base",
     "language": "fr",
     "autostart": True,
+    "device": None,
 }
 
 

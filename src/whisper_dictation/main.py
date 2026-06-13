@@ -24,7 +24,7 @@ class App:
             startup.enable_autostart()
         else:
             startup.disable_autostart()
-        self._recorder = Recorder()
+        self._recorder = Recorder(device=self._conf.get("device"))
         self._transcriber = Transcriber(
             model_size=self._conf["model"],
             language=self._conf.get("language"),
@@ -86,6 +86,7 @@ class App:
         cfg.save(new_config)
         self._conf = new_config
         self._settings_window._config = new_config
+        self._recorder = Recorder(device=new_config.get("device"))
         if new_config.get("hotkey") != old_hotkey:
             self._hotkey_mgr.restart(new_config["hotkey"])
         if new_config.get("autostart") != old_autostart:

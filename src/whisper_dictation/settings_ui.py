@@ -52,7 +52,7 @@ class SettingsWindow:
             with self._lock:
                 self._root = root
 
-            w, h = 420, 340
+            w, h = 420, 400
             root.title("Whisper Dictation — Settings")
             root.configure(bg=_BG)
             root.resizable(False, False)
@@ -123,6 +123,25 @@ class SettingsWindow:
         lang_entry.pack(side="left", fill="x", expand=True)
         hint("  e.g. fr, en, auto").pack(anchor="w", padx=16)
 
+        try:
+            import sounddevice as _sd
+            _input_names = [d["name"] for d in _sd.query_devices() if d["max_input_channels"] > 0]
+        except Exception:
+            _input_names = []
+        mic_options = ["System default"] + _input_names
+        cur_device = self._config.get("device", None)
+        cur_mic = cur_device if cur_device in mic_options else "System default"
+        mic_var = tk.StringVar(value=cur_mic)
+        row = tk.Frame(root, bg=_BG)
+        row.pack(fill="x", **pad)
+        lbl(row, "Microphone:", width=10, anchor="w").pack(side="left")
+        mic_om = tk.OptionMenu(row, mic_var, *mic_options)
+        mic_om.configure(bg=_INPUT_BG, fg=_FG, activebackground=_BTN_BG, activeforeground=_FG,
+                         highlightthickness=0, relief="flat", font=_FONT)
+        mic_om["menu"].configure(bg=_INPUT_BG, fg=_FG, font=_FONT)
+        mic_om.pack(side="left")
+        hint("  Leave as System default unless you have multiple mics").pack(anchor="w", padx=16)
+
         # ── Behaviour ──────────────────────────────────────────────────
         section("Behaviour").pack(anchor="w", padx=16, pady=(12, 2))
 
@@ -152,6 +171,7 @@ class SettingsWindow:
                 "model": model_var.get(),
                 "language": lang_entry.get().strip(),
                 "autostart": bool(autostart_var.get()),
+                "device": None if mic_var.get() == "System default" else mic_var.get(),
             }
             self._on_save(new_config)
             close()

@@ -18,7 +18,8 @@ class RecordingError(RuntimeError):
 
 
 class Recorder:
-    def __init__(self) -> None:
+    def __init__(self, device: str | None = None) -> None:
+        self._device = device
         self._lock = threading.Lock()
         self._chunks: list[np.ndarray] = []
         self._stream: Optional[sd.InputStream] = None
@@ -43,6 +44,7 @@ class Recorder:
                 channels=_CHANNELS,
                 dtype=_DTYPE,
                 callback=self._callback,
+                device=self._device,
             )
             self._stream.start()
 
@@ -71,6 +73,11 @@ class Recorder:
     ) -> None:
         if self._recording:
             self._chunks.append(indata.copy())
+
+    @staticmethod
+    def list_input_devices() -> list[str]:
+        devices = sd.query_devices()
+        return [d["name"] for d in devices if d["max_input_channels"] > 0]
 
     @staticmethod
     def _has_input_device() -> bool:
