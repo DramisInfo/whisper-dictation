@@ -187,14 +187,14 @@ class SettingsWindow:
                 hm = self._hotkey_manager
                 if hm is None:
                     return
-                if not hm._capture_active and not _capture_done[0]:
-                    # Cancelled externally
-                    return
+                # Update label with latest partial combo
                 if _capture_result:
                     hotkey_var.set(_capture_result[0])
+                # Done — cb was called, combo is final
                 if _capture_done[0]:
                     hk_label.config(fg=_FG)
                     return
+                # Still waiting — keep polling
                 root.after(50, _poll)
 
             root.after(50, _poll)

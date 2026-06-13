@@ -158,9 +158,9 @@ class HotkeyManager:
                     combo = _combo_from_seen(self._capture_seen)
                     self._last_captured = combo  # store before clearing
                     cb = self._capture_on_done
-                    self.cancel_capture()  # clear state first
                     if cb is not None:
-                        cb(combo)
+                        cb(combo)  # set _capture_done[0]=True BEFORE cancel_capture clears _capture_active
+                    self.cancel_capture()
                 return
             norm = _normalize(key)
             self._pressed.discard(norm)
