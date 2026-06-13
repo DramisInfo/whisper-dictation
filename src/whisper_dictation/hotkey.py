@@ -105,6 +105,7 @@ class HotkeyManager:
         self._capture_seen: set = set()
         self._capture_on_change: Optional[Callable[[str], None]] = None
         self._capture_on_done: Optional[Callable[[str], None]] = None
+        self._last_captured: str = ""  # result of last completed capture
 
     def begin_capture(self, on_change: Callable[[str], None], on_done: Callable[[str], None]) -> None:
         """Enter capture mode: suppress hotkey activation, collect keys from pynput listener."""
@@ -155,10 +156,11 @@ class HotkeyManager:
                 self._capture_pressed.discard(token)
                 if not self._capture_pressed and self._capture_seen:
                     combo = _combo_from_seen(self._capture_seen)
+                    self._last_captured = combo  # store before clearing
                     cb = self._capture_on_done
+                    self.cancel_capture()  # clear state first
                     if cb is not None:
                         cb(combo)
-                    self.cancel_capture()
                 return
             norm = _normalize(key)
             self._pressed.discard(norm)

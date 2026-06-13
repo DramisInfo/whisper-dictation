@@ -169,13 +169,35 @@ class SettingsWindow:
             hotkey_var.set("Press keys…")
             hk_label.config(fg=_ACCENT)
 
+            # Use a mutable container to pass results from pynput thread to Tk thread safely
+            _capture_result: list[str] = []
+            _capture_done: list[bool] = [False]
+
             def on_change(combo: str) -> None:
-                root.after(0, lambda: hotkey_var.set(combo))
+                _capture_result[:] = [combo]
 
             def on_done(combo: str) -> None:
-                root.after(0, lambda: (hotkey_var.set(combo), hk_label.config(fg=_FG)))
+                _capture_result[:] = [combo]
+                _capture_done[0] = True
 
             self._hotkey_manager.begin_capture(on_change=on_change, on_done=on_done)
+
+            def _poll() -> None:
+                """Poll capture state from the Tk thread — avoids cross-thread after() issues."""
+                hm = self._hotkey_manager
+                if hm is None:
+                    return
+                if not hm._capture_active and not _capture_done[0]:
+                    # Cancelled externally
+                    return
+                if _capture_result:
+                    hotkey_var.set(_capture_result[0])
+                if _capture_done[0]:
+                    hk_label.config(fg=_FG)
+                    return
+                root.after(50, _poll)
+
+            root.after(50, _poll)
 
         for w in (hk_frame, hk_label):
             w.bind("<Button-1>", _start_capture)
