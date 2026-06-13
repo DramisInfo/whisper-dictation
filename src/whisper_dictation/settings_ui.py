@@ -138,12 +138,76 @@ class SettingsWindow:
         # ── Transcription ──────────────────────────────────────────────
         section("Transcription").pack(anchor="w", padx=16, pady=(14, 2))
 
+        # --- Hotkey capture widget ---
+        _capturing = [False]
+        _pressed = set()
+
+        _TK_NAME_MAP = {
+            "Control_L": "ctrl", "Control_R": "ctrl",
+            "Shift_L": "shift", "Shift_R": "shift",
+            "Alt_L": "alt", "Alt_R": "alt",
+            "Super_L": "windows", "Super_R": "windows",
+            "Return": "enter", "BackSpace": "backspace",
+            "Tab": "tab", "Escape": "escape", "space": "space",
+            **{f"F{i}": f"f{i}" for i in range(1, 13)},
+        }
+
+        def _tk_to_name(event: tk.Event) -> str:
+            return _TK_NAME_MAP.get(event.keysym, event.keysym.lower())
+
+        _MOD_ORDER = ["ctrl", "alt", "shift", "windows"]
+
+        def _combo_from_set(keys: set) -> str:
+            mods = [k for k in _MOD_ORDER if k in keys]
+            others = sorted(k for k in keys if k not in _MOD_ORDER)
+            return "+".join(mods + others)
+
+        cur_hotkey = self._config.get("hotkey", "ctrl+windows")
+        hotkey_var = tk.StringVar(value=cur_hotkey)
+
         row = tk.Frame(root, bg=_BG)
         row.pack(fill="x", **pad)
         lbl(row, "Hotkey:", width=10, anchor="w").pack(side="left")
-        hotkey_entry = entry(row, self._config.get("hotkey", "right ctrl"))
-        hotkey_entry.pack(side="left", fill="x", expand=True)
-        hint("  e.g. right ctrl, f13, ctrl+shift+d").pack(anchor="w", padx=16)
+
+        hk_frame = tk.Frame(row, bg=_INPUT_BG, padx=8, pady=4, cursor="hand2")
+        hk_frame.pack(side="left", fill="x", expand=True)
+        hk_label = tk.Label(hk_frame, textvariable=hotkey_var, bg=_INPUT_BG,
+                            fg=_FG, font=_FONT, anchor="w")
+        hk_label.pack(fill="x")
+
+        def _start_capture(e=None) -> None:
+            if _capturing[0]:
+                return
+            _capturing[0] = True
+            _pressed.clear()
+            hotkey_var.set("Press keys…")
+            hk_label.config(fg=_ACCENT)
+            root.focus_set()
+
+        def _on_key_press(e: tk.Event) -> None:  # type: ignore[return]
+            if not _capturing[0]:
+                return
+            name = _tk_to_name(e)
+            if name and name != "??":
+                _pressed.add(name)
+            return "break"  # type: ignore[return-value]
+
+        def _on_key_release(e: tk.Event) -> None:  # type: ignore[return]
+            if not _capturing[0]:
+                return
+            _capturing[0] = False
+            combo = _combo_from_set(_pressed) if _pressed else cur_hotkey
+            hotkey_var.set(combo)
+            hk_label.config(fg=_FG)
+            _pressed.clear()
+            return "break"  # type: ignore[return-value]
+
+        for w in (hk_frame, hk_label):
+            w.bind("<Button-1>", _start_capture)
+        root.bind("<KeyPress>", _on_key_press)
+        root.bind("<KeyRelease>", _on_key_release)
+
+        hint("  Click the box, then press your key combination").pack(anchor="w", padx=16)
 
         row = tk.Frame(root, bg=_BG)
         row.pack(fill="x", **pad)
@@ -208,8 +272,8 @@ class SettingsWindow:
         btn_row.pack(side="bottom", fill="x", padx=16, pady=14)
 
         def save() -> None:
-            hk = hotkey_entry.get().strip()
-            if not hk:
+            hk = hotkey_var.get().strip()
+            if not hk or hk == "Press keys…":
                 messagebox.showerror(
                     "Invalid Hotkey", "Hotkey field cannot be empty.", parent=root
                 )

@@ -1,9 +1,9 @@
-"""Global hotkey manager — fires callbacks on press and release."""
+"""Global hotkey manager — supports single keys and combos like ctrl+windows."""
 
 from __future__ import annotations
 
 import threading
-from typing import Callable, Optional
+from typing import Callable
 
 import keyboard
 
@@ -23,8 +23,14 @@ class HotkeyManager:
         self._hooks: list = []
 
     def start(self) -> None:
-        # keyboard fires repeated events while key is held; guard with _held flag.
+        keys = [k.strip().lower() for k in self._hotkey.replace("+", " ").split()]
+
         def _press(e: keyboard.KeyboardEvent) -> None:
+            # For combos, all modifier keys must be currently held.
+            if len(keys) > 1:
+                modifiers = keys[:-1]
+                if not all(keyboard.is_pressed(m) for m in modifiers):
+                    return
             with self._lock:
                 if self._held:
                     return
@@ -38,9 +44,10 @@ class HotkeyManager:
                 self._held = False
             self._on_release()
 
-        key_name = self._hotkey.strip().lower()
-        self._hooks.append(keyboard.on_press_key(key_name, _press, suppress=False))
-        self._hooks.append(keyboard.on_release_key(key_name, _release, suppress=False))
+        # Hook only on the final key of the combo.
+        trigger_key = keys[-1]
+        self._hooks.append(keyboard.on_press_key(trigger_key, _press, suppress=False))
+        self._hooks.append(keyboard.on_release_key(trigger_key, _release, suppress=False))
 
     def stop(self) -> None:
         for hook in self._hooks:

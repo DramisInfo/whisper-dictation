@@ -14,7 +14,7 @@ _CONFIG_FILE = "config.yaml"
 _DEFAULT_CONFIG_NAME = "config.default.yaml"
 
 _DEFAULTS: dict[str, Any] = {
-    "hotkey": "right ctrl",
+    "hotkey": "ctrl+windows",
     "model": "base",
     "language": "fr",
     "autostart": True,

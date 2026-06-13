@@ -43,6 +43,11 @@ jobs:
           OUTPUT: CHANGELOG.md
           GITHUB_REPO: ${{ github.repository }}
 
+      - name: Patch version in source
+        shell: bash
+        run: |
+          sed -i "s/__version__ = \".*\"/__version__ = \"$APP_VERSION\"/" src/whisper_dictation/__init__.py
+
       - name: Build with PyInstaller
         run: pyinstaller whisper_dictation.spec
 
