@@ -4,10 +4,47 @@ from __future__ import annotations
 
 import threading
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 from typing import Callable, Optional
 
 _MODELS = ["tiny", "base", "small", "medium", "large-v3"]
+
+LANGUAGES = {
+    "auto": "Auto-detect",
+    "af": "Afrikaans", "sq": "Albanian", "am": "Amharic", "ar": "Arabic",
+    "hy": "Armenian", "as": "Assamese", "az": "Azerbaijani", "ba": "Bashkir",
+    "eu": "Basque", "be": "Belarusian", "bn": "Bengali", "bs": "Bosnian",
+    "br": "Breton", "bg": "Bulgarian", "ca": "Catalan", "zh": "Chinese",
+    "hr": "Croatian", "cs": "Czech", "da": "Danish", "nl": "Dutch",
+    "en": "English", "et": "Estonian", "fo": "Faroese", "fi": "Finnish",
+    "fr": "French", "gl": "Galician", "ka": "Georgian", "de": "German",
+    "el": "Greek", "gu": "Gujarati", "ht": "Haitian Creole", "ha": "Hausa",
+    "haw": "Hawaiian", "he": "Hebrew", "hi": "Hindi", "hu": "Hungarian",
+    "is": "Icelandic", "id": "Indonesian", "it": "Italian", "ja": "Japanese",
+    "jw": "Javanese", "kn": "Kannada", "kk": "Kazakh", "km": "Khmer",
+    "ko": "Korean", "lo": "Lao", "la": "Latin", "lv": "Latvian",
+    "ln": "Lingala", "lt": "Lithuanian", "lb": "Luxembourgish", "mk": "Macedonian",
+    "mg": "Malagasy", "ms": "Malay", "ml": "Malayalam", "mt": "Maltese",
+    "mi": "Maori", "mr": "Marathi", "mn": "Mongolian", "my": "Myanmar",
+    "ne": "Nepali", "no": "Norwegian", "nn": "Nynorsk", "oc": "Occitan",
+    "ps": "Pashto", "fa": "Persian", "pl": "Polish", "pt": "Portuguese",
+    "pa": "Punjabi", "ro": "Romanian", "ru": "Russian", "sa": "Sanskrit",
+    "sr": "Serbian", "sn": "Shona", "sd": "Sindhi", "si": "Sinhala",
+    "sk": "Slovak", "sl": "Slovenian", "so": "Somali", "es": "Spanish",
+    "su": "Sundanese", "sw": "Swahili", "sv": "Swedish", "tl": "Tagalog",
+    "tg": "Tajik", "ta": "Tamil", "tt": "Tatar", "te": "Telugu",
+    "th": "Thai", "bo": "Tibetan", "tr": "Turkish", "tk": "Turkmen",
+    "uk": "Ukrainian", "ur": "Urdu", "uz": "Uzbek", "vi": "Vietnamese",
+    "cy": "Welsh", "yi": "Yiddish", "yo": "Yoruba",
+}
+
+_CODE_TO_NAME: dict[str, str] = {k: v for k, v in LANGUAGES.items()}
+_NAME_TO_CODE: dict[str, str] = {v: k for k, v in LANGUAGES.items()}
+
+_FIXED_TOP = ["Auto-detect", "French"]
+_LANG_VALUES = _FIXED_TOP + sorted(
+    name for name in _NAME_TO_CODE if name not in _FIXED_TOP
+)
 
 _BG = "#1e1e1e"
 _FG = "#f0f0f0"
@@ -75,6 +112,12 @@ class SettingsWindow:
                 self._open = False
 
     def _build_content(self, root: tk.Tk, close: Callable[[], None]) -> None:
+        style = ttk.Style(root)
+        style.theme_use("clam")
+        style.configure("TCombobox", fieldbackground="#2d2d2d", background="#3a3a3a",
+                        foreground="#f0f0f0", selectbackground="#3a3a3a",
+                        selectforeground="#f0f0f0", arrowcolor="#f0f0f0")
+
         pad = {"padx": 16, "pady": 4}
 
         def lbl(parent: tk.Widget, text: str, **kw) -> tk.Label:
@@ -119,9 +162,15 @@ class SettingsWindow:
         row = tk.Frame(root, bg=_BG)
         row.pack(fill="x", **pad)
         lbl(row, "Language:", width=10, anchor="w").pack(side="left")
-        lang_entry = entry(row, self._config.get("language", "fr"))
-        lang_entry.pack(side="left", fill="x", expand=True)
-        hint("  e.g. fr, en, auto").pack(anchor="w", padx=16)
+        cur_lang_code = self._config.get("language", "fr")
+        cur_lang_name = _CODE_TO_NAME.get(cur_lang_code, "French")
+        lang_combo = ttk.Combobox(row, values=_LANG_VALUES, state="readonly", width=28,
+                                  font=_FONT)
+        lang_combo.set(cur_lang_name)
+        lang_combo.pack(side="left")
+        hint("  99 languages supported — Auto-detect works well for mixed content").pack(
+            anchor="w", padx=16
+        )
 
         try:
             import sounddevice as _sd
@@ -169,7 +218,7 @@ class SettingsWindow:
                 **self._config,
                 "hotkey": hk,
                 "model": model_var.get(),
-                "language": lang_entry.get().strip(),
+                "language": _NAME_TO_CODE.get(lang_combo.get(), "fr"),
                 "autostart": bool(autostart_var.get()),
                 "device": None if mic_var.get() == "System default" else mic_var.get(),
             }
