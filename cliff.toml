@@ -2,10 +2,7 @@
 # Generates a conventional-commits changelog grouped by type.
 
 [changelog]
-header = """
-# Changelog\n
-All notable changes to Whisper Dictation are documented here.\n
-"""
+header = ""
 body = """
 {% if version %}\
 ## [{{ version | trim_start_matches(pat="v") }}] — {{ timestamp | date(format="%Y-%m-%d") }}
