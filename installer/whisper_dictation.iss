@@ -1,10 +1,10 @@
 ; Inno Setup 6 script for Whisper Dictation
-; Run from the repo root: iscc installer\whisper_dictation.iss
-; version.txt must exist in the repo root (created by CI from the git tag).
+; Run from CI: iscc /DAppVersion=1.2.3 installer\whisper_dictation.iss
+; AppVersion is passed via CLI flag /DAppVersion= (no version.txt file needed)
 
-#define VerFile FileOpen("version.txt")
-#define AppVersion FileRead(VerFile)
-#expr FileClose(VerFile)
+#ifndef AppVersion
+  #define AppVersion "dev"
+#endif
 
 #define AppName "Whisper Dictation"
 #define AppPublisher "DramisInfo"

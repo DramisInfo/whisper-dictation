@@ -12,8 +12,10 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
+      - name: Checkout (full history for changelog)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # git-cliff needs full history
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -26,12 +28,20 @@ jobs:
       - name: Generate icon
         run: python scripts/generate_icon.py
 
-      - name: Write version.txt
+      - name: Extract version
         shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          echo "$VERSION" > version.txt
           echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Generate CHANGELOG with git-cliff
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --verbose --tag "${{ github.ref_name }}"
+        env:
+          OUTPUT: CHANGELOG.md
+          GITHUB_REPO: ${{ github.repository }}
 
       - name: Build with PyInstaller
         run: pyinstaller whisper_dictation.spec
@@ -40,7 +50,8 @@ jobs:
         run: choco install innosetup -y
 
       - name: Build installer
-        run: iscc installer\whisper_dictation.iss
+        shell: pwsh
+        run: iscc /DAppVersion=${{ env.APP_VERSION }} installer\whisper_dictation.iss
 
       - name: Zip portable build
         shell: pwsh
@@ -49,7 +60,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          body_path: CHANGELOG.md
           files: |
             installer/output/WhisperDictation-Setup-*.exe
             dist/WhisperDictation-${{ github.ref_name }}-portable.zip
+            CHANGELOG.md
