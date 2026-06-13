@@ -1,0 +1,13 @@
+# Whisper Dictation — default configuration
+# Copy to %APPDATA%\whisper-dictation\config.yaml to customise.
+
+# Global push-to-talk hotkey (held = record, released = transcribe + inject)
+hotkey: "right ctrl"
+
+# Whisper model size: tiny | base | small | medium | large-v3
+# Larger models are slower but more accurate.
+model: "base"
+
+# Transcription language (ISO 639-1 code).
+# Use null to enable automatic language detection.
+language: "fr"

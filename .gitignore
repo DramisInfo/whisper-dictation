@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+*.manifest
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# PyInstaller
+*.spec.bak
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+.vs/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Project runtime files
+*.log
+config.yaml
+models/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
