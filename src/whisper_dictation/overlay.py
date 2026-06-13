@@ -5,6 +5,7 @@ from __future__ import annotations
 import ctypes
 import ctypes.wintypes
 import random
+import sys
 import threading
 import tkinter as tk
 from typing import Callable, Optional
@@ -16,13 +17,6 @@ _ALPHA = 0.82
 _RADIUS = 8
 _DEFAULT_X = 165
 
-# Win32 constants for forcing always-on-top above taskbar
-_HWND_TOPMOST = -1
-_SWP_NOSIZE = 0x0001
-_SWP_NOMOVE = 0x0002
-_SWP_NOACTIVATE = 0x0010
-_SWP_FLAGS = _SWP_NOSIZE | _SWP_NOMOVE | _SWP_NOACTIVATE
-
 # Equalizer bar geometry
 _N_BARS = 6
 _BAR_W = 4
@@ -30,7 +24,94 @@ _BAR_GAP = 2
 _BAR_MAX_H = 22
 _BAR_MIN_H = 2
 _BAR_X0 = 10
-_BAR_BOTTOM = 35  # y of bar bottom edge (center=24, max_h/2=11 → 24+11=35)
+_BAR_BOTTOM = 35
+
+# ---------------------------------------------------------------------------
+# Win32 always-on-top helpers (Windows only — graceful no-op on other OSes)
+# ---------------------------------------------------------------------------
+
+if sys.platform == "win32":
+    _user32 = ctypes.WinDLL("user32", use_last_error=True)
+
+    # Types
+    if ctypes.sizeof(ctypes.c_void_p) == 8:
+        _LONG_PTR = ctypes.c_longlong
+    else:
+        _LONG_PTR = ctypes.c_long
+
+    _WNDPROC = ctypes.WINFUNCTYPE(
+        _LONG_PTR,
+        ctypes.wintypes.HWND,
+        ctypes.wintypes.UINT,
+        ctypes.wintypes.WPARAM,
+        ctypes.wintypes.LPARAM,
+    )
+    _WINEVENTPROC = ctypes.WINFUNCTYPE(
+        None,
+        ctypes.wintypes.HANDLE,
+        ctypes.wintypes.DWORD,
+        ctypes.wintypes.HWND,
+        ctypes.wintypes.LONG,
+        ctypes.wintypes.LONG,
+        ctypes.wintypes.DWORD,
+        ctypes.wintypes.DWORD,
+    )
+
+    # Prototypes
+    _user32.GetWindowLongPtrW.argtypes = [ctypes.wintypes.HWND, ctypes.c_int]
+    _user32.GetWindowLongPtrW.restype = _LONG_PTR
+    _user32.SetWindowLongPtrW.argtypes = [ctypes.wintypes.HWND, ctypes.c_int, _LONG_PTR]
+    _user32.SetWindowLongPtrW.restype = _LONG_PTR
+    _user32.SetWindowPos.argtypes = [
+        ctypes.wintypes.HWND, ctypes.wintypes.HWND,
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        ctypes.wintypes.UINT,
+    ]
+    _user32.SetWindowPos.restype = ctypes.wintypes.BOOL
+    _user32.CallWindowProcW.argtypes = [
+        _LONG_PTR, ctypes.wintypes.HWND, ctypes.wintypes.UINT,
+        ctypes.wintypes.WPARAM, ctypes.wintypes.LPARAM,
+    ]
+    _user32.CallWindowProcW.restype = _LONG_PTR
+    _user32.SetWinEventHook.argtypes = [
+        ctypes.wintypes.DWORD, ctypes.wintypes.DWORD,
+        ctypes.wintypes.HMODULE, _WINEVENTPROC,
+        ctypes.wintypes.DWORD, ctypes.wintypes.DWORD, ctypes.wintypes.DWORD,
+    ]
+    _user32.SetWinEventHook.restype = ctypes.wintypes.HANDLE
+    _user32.UnhookWinEvent.argtypes = [ctypes.wintypes.HANDLE]
+    _user32.UnhookWinEvent.restype = ctypes.wintypes.BOOL
+
+    class _WINDOWPOS(ctypes.Structure):
+        _fields_ = [
+            ("hwnd", ctypes.wintypes.HWND),
+            ("hwndInsertAfter", ctypes.wintypes.HWND),
+            ("x", ctypes.c_int), ("y", ctypes.c_int),
+            ("cx", ctypes.c_int), ("cy", ctypes.c_int),
+            ("flags", ctypes.wintypes.UINT),
+        ]
+
+    # Constants
+    _GWL_EXSTYLE = -20
+    _GWLP_WNDPROC = -4
+    _WS_EX_TOPMOST    = 0x00000008
+    _WS_EX_TOOLWINDOW = 0x00000080
+    _WS_EX_NOACTIVATE = 0x08000000
+    _HWND_TOPMOST = ctypes.wintypes.HWND(-1)
+    _SWP_NOSIZE       = 0x0001
+    _SWP_NOMOVE       = 0x0002
+    _SWP_NOZORDER     = 0x0004
+    _SWP_NOACTIVATE   = 0x0010
+    _SWP_FRAMECHANGED = 0x0020
+    _SWP_SHOWWINDOW   = 0x0040
+    _WM_WINDOWPOSCHANGING = 0x0046
+    _WM_WINDOWPOSCHANGED  = 0x0047
+    _WM_DESTROY           = 0x0002
+    _EVENT_SYSTEM_FOREGROUND    = 0x0003
+    _EVENT_OBJECT_SHOW          = 0x8002
+    _EVENT_OBJECT_LOCATIONCHANGE = 0x800B
+    _WINEVENT_OUTOFCONTEXT   = 0x0000
+    _WINEVENT_SKIPOWNPROCESS = 0x0002
 
 
 class Overlay:
@@ -50,6 +131,12 @@ class Overlay:
         self._spin_step = 0
         self._drag_start_x = 0
         self._drag_win_x = overlay_x
+        # Win32 subclassing state
+        self._hwnd: Optional[int] = None
+        self._old_wndproc: Optional[int] = None
+        self._new_wndproc_ref = None  # keep reference alive
+        self._winevent_hooks: list = []
+        self._winevent_proc_ref = None  # keep reference alive
         threading.Thread(target=self._run, daemon=True, name="overlay-tk").start()
 
     # ------------------------------------------------------------------
@@ -79,26 +166,118 @@ class Overlay:
 
         self._apply_state()
         self._animate()
-        self._enforce_topmost()  # start periodic Win32 topmost enforcement
+
+        # Apply robust always-on-top after window is fully realized
+        root.after(100, self._install_win32_topmost)
+        # Watchdog fallback — slower than before since event hooks cover most cases
+        root.after(1500, self._watchdog_topmost)
+
         root.mainloop()
 
-    def _enforce_topmost(self) -> None:
-        """Re-assert Win32 HWND_TOPMOST every 500ms — survives taskbar clicks."""
-        root = self._root
-        if root is None:
+    def _install_win32_topmost(self) -> None:
+        """Apply Win32 extended styles + subclass + event hooks for robust topmost."""
+        if sys.platform != "win32" or self._root is None:
             return
         try:
-            import sys
-            if sys.platform == "win32":
-                hwnd = ctypes.windll.user32.GetParent(root.winfo_id())
-                if hwnd == 0:
-                    hwnd = root.winfo_id()
-                ctypes.windll.user32.SetWindowPos(
-                    hwnd, _HWND_TOPMOST, 0, 0, 0, 0, _SWP_FLAGS
-                )
+            self._hwnd = self._root.winfo_id()
+            hwnd = ctypes.wintypes.HWND(self._hwnd)
+
+            # 1. Set extended styles: TOPMOST + TOOLWINDOW + NOACTIVATE
+            exstyle = _user32.GetWindowLongPtrW(hwnd, _GWL_EXSTYLE)
+            exstyle |= _WS_EX_TOPMOST | _WS_EX_TOOLWINDOW | _WS_EX_NOACTIVATE
+            _user32.SetWindowLongPtrW(hwnd, _GWL_EXSTYLE, exstyle)
+
+            # 2. Apply HWND_TOPMOST with FRAMECHANGED to commit style change
+            _user32.SetWindowPos(
+                hwnd, _HWND_TOPMOST, 0, 0, 0, 0,
+                _SWP_NOMOVE | _SWP_NOSIZE | _SWP_NOACTIVATE | _SWP_FRAMECHANGED | _SWP_SHOWWINDOW,
+            )
+
+            # 3. Subclass our own window to intercept WM_WINDOWPOSCHANGING
+            def wndproc(h, msg, wparam, lparam):
+                if msg == _WM_WINDOWPOSCHANGING:
+                    # Force HWND_TOPMOST before any z-order change is applied
+                    wp = ctypes.cast(lparam, ctypes.POINTER(_WINDOWPOS)).contents
+                    wp.hwndInsertAfter = _HWND_TOPMOST
+                    wp.flags &= ~_SWP_NOZORDER
+                    wp.flags |= _SWP_NOACTIVATE
+                elif msg == _WM_WINDOWPOSCHANGED:
+                    # After any change, schedule a re-assert on the Tk thread
+                    if self._root is not None:
+                        self._root.after_idle(self._force_topmost)
+                elif msg == _WM_DESTROY:
+                    self._uninstall_win32_topmost()
+                return _user32.CallWindowProcW(self._old_wndproc, h, msg, wparam, lparam)
+
+            self._new_wndproc_ref = _WNDPROC(wndproc)
+            self._old_wndproc = _user32.SetWindowLongPtrW(
+                hwnd, _GWLP_WNDPROC,
+                ctypes.cast(self._new_wndproc_ref, ctypes.c_void_p).value,
+            )
+
+            # 4. SetWinEventHook — fires immediately when foreground changes
+            #    (user clicks taskbar, Start, notification center, other app, etc.)
+            def on_win_event(hook, event, h, id_obj, id_child, thread, time):
+                self._force_topmost()
+
+            self._winevent_proc_ref = _WINEVENTPROC(on_win_event)
+
+            h1 = _user32.SetWinEventHook(
+                _EVENT_SYSTEM_FOREGROUND, _EVENT_SYSTEM_FOREGROUND,
+                None, self._winevent_proc_ref, 0, 0,
+                _WINEVENT_OUTOFCONTEXT | _WINEVENT_SKIPOWNPROCESS,
+            )
+            if h1:
+                self._winevent_hooks.append(h1)
+
+            h2 = _user32.SetWinEventHook(
+                _EVENT_OBJECT_SHOW, _EVENT_OBJECT_LOCATIONCHANGE,
+                None, self._winevent_proc_ref, 0, 0,
+                _WINEVENT_OUTOFCONTEXT | _WINEVENT_SKIPOWNPROCESS,
+            )
+            if h2:
+                self._winevent_hooks.append(h2)
+
+        except Exception:
+            pass  # Non-Windows or restricted environment — degrade gracefully
+
+    def _force_topmost(self) -> None:
+        """Assert HWND_TOPMOST — safe to call from any thread."""
+        if sys.platform != "win32" or not self._hwnd:
+            return
+        try:
+            _user32.SetWindowPos(
+                ctypes.wintypes.HWND(self._hwnd), _HWND_TOPMOST, 0, 0, 0, 0,
+                _SWP_NOMOVE | _SWP_NOSIZE | _SWP_NOACTIVATE | _SWP_SHOWWINDOW,
+            )
         except Exception:
             pass
-        root.after(500, self._enforce_topmost)
+
+    def _watchdog_topmost(self) -> None:
+        """Slow fallback watchdog — 1500ms, most cases covered by event hooks."""
+        if self._root is None:
+            return
+        self._force_topmost()
+        self._root.after(1500, self._watchdog_topmost)
+
+    def _uninstall_win32_topmost(self) -> None:
+        """Clean up hooks and subclass on destroy."""
+        if sys.platform != "win32":
+            return
+        for hook in self._winevent_hooks:
+            try:
+                _user32.UnhookWinEvent(hook)
+            except Exception:
+                pass
+        self._winevent_hooks.clear()
+        if self._hwnd and self._old_wndproc:
+            try:
+                _user32.SetWindowLongPtrW(
+                    ctypes.wintypes.HWND(self._hwnd), _GWLP_WNDPROC, self._old_wndproc
+                )
+            except Exception:
+                pass
+        self._old_wndproc = None
 
     def _draw_pill(self, canvas: tk.Canvas) -> None:
         r, fill = _RADIUS, _BG_PILL
