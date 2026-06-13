@@ -120,11 +120,11 @@ class App:
         )
         if new_config.get("hotkey") != old_hotkey:
             self._hotkey_mgr.restart(new_config["hotkey"])
-        if new_config.get("autostart") != old_autostart:
-            if new_config.get("autostart"):
-                startup.enable_autostart()
-            else:
-                startup.disable_autostart()
+        # Always apply autostart — don't rely on "changed" check, registry may be out of sync
+        if new_config.get("autostart"):
+            startup.enable_autostart()
+        else:
+            startup.disable_autostart()
 
     def _quit(self) -> None:
         _log.info("Whisper Dictation stopping")

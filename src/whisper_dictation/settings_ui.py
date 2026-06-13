@@ -263,7 +263,10 @@ class SettingsWindow:
 
         row = tk.Frame(root, bg=_BG)
         row.pack(fill="x", **pad)
-        autostart_var = tk.BooleanVar(value=bool(self._config.get("autostart", True)))
+        # Read real registry state — not just config file value — to avoid desync
+        from . import startup as _startup
+        real_autostart = _startup.is_autostart_enabled()
+        autostart_var = tk.BooleanVar(value=real_autostart)
         tk.Checkbutton(
             row, text="Start with Windows", variable=autostart_var,
             bg=_BG, fg=_FG, selectcolor=_INPUT_BG,
