@@ -15,8 +15,9 @@ _DEFAULT_CONFIG_NAME = "config.default.yaml"
 
 _DEFAULTS: dict[str, Any] = {
     "hotkey": "ctrl+windows",
-    "model": "base",
+    "model": "small",
     "language": "fr",
+    "initial_prompt": "Transcription en français. Vocabulaire informatique et technologique.",
     "autostart": True,
     "device": None,
 }

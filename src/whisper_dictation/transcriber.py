@@ -13,9 +13,10 @@ _log = get_logger(__name__)
 
 
 class Transcriber:
-    def __init__(self, model_size: str = "base", language: Optional[str] = "fr") -> None:
+    def __init__(self, model_size: str = "small", language: Optional[str] = "fr", initial_prompt: Optional[str] = None) -> None:
         self._model_size = model_size
         self._language = language or None  # None triggers auto-detect
+        self._initial_prompt = initial_prompt or None
         self._model = None
 
     def _load_model(self) -> None:
@@ -47,6 +48,7 @@ class Transcriber:
             language=self._language,
             beam_size=5,
             vad_filter=True,
+            initial_prompt=self._initial_prompt,
         )
         text = " ".join(seg.text.strip() for seg in segments).strip()
         _log.info("Transcription result: %s", (text[:80] + "…") if len(text) > 80 else text)

@@ -89,7 +89,7 @@ class SettingsWindow:
             with self._lock:
                 self._root = root
 
-            w, h = 420, 400
+            w, h = 420, 450
             root.title("Whisper Dictation — Settings")
             root.configure(bg=_BG)
             root.resizable(False, False)
@@ -236,6 +236,14 @@ class SettingsWindow:
             anchor="w", padx=16
         )
 
+        row = tk.Frame(root, bg=_BG)
+        row.pack(fill="x", **pad)
+        lbl(row, "Context hint:", width=13, anchor="w").pack(side="left")
+        cur_prompt = self._config.get("initial_prompt", "")
+        prompt_entry = entry(row, cur_prompt if cur_prompt else "")
+        prompt_entry.pack(side="left", fill="x", expand=True)
+        hint("  Helps Whisper pick the right vocabulary").pack(anchor="w", padx=16)
+
         try:
             import sounddevice as _sd
             _input_names = [d["name"] for d in _sd.query_devices() if d["max_input_channels"] > 0]
@@ -283,6 +291,7 @@ class SettingsWindow:
                 "hotkey": hk,
                 "model": model_var.get(),
                 "language": _NAME_TO_CODE.get(lang_combo.get(), "fr"),
+                "initial_prompt": prompt_entry.get().strip() or None,
                 "autostart": bool(autostart_var.get()),
                 "device": None if mic_var.get() == "System default" else mic_var.get(),
             }

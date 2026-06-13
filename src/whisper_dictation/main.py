@@ -15,6 +15,7 @@ from .recorder import Recorder, RecordingError
 from .transcriber import Transcriber
 from .injector import inject
 from .tray import TrayIcon
+from .overlay import Overlay
 from .settings_ui import SettingsWindow
 
 _log = get_logger(__name__)
@@ -32,7 +33,9 @@ class App:
         self._transcriber = Transcriber(
             model_size=self._conf["model"],
             language=self._conf.get("language"),
+            initial_prompt=self._conf.get("initial_prompt"),
         )
+        self._overlay = Overlay()
         self._settings_window = SettingsWindow(self._conf, self._on_settings_save)
         self._tray = TrayIcon(
             on_settings=self._settings_window.show,
@@ -54,17 +57,18 @@ class App:
     def _on_press(self) -> None:
         try:
             self._recorder.start()
-            self._tray.set_recording(True)
+            self._overlay.set_state("recording")
         except RecordingError as exc:
             _log.error("Recording error: %s", exc)
-            self._tray.set_recording(False)
+            self._overlay.set_state("idle")
             self._tray.notify("Whisper Dictation — Error", str(exc))
 
     def _on_release(self) -> None:
         audio = self._recorder.stop()
-        self._tray.set_recording(False)
         if audio.size == 0:
+            self._overlay.set_state("idle")
             return
+        self._overlay.set_state("transcribing")
         # Transcription is slow — run off the hotkey thread.
         self._transcribe_thread = threading.Thread(
             target=self._transcribe_and_inject,
@@ -81,6 +85,8 @@ class App:
         except Exception as exc:
             _log.error("Transcription/injection error: %s", exc, exc_info=True)
             self._tray.notify("Whisper Dictation — Transcription Error", str(exc))
+        finally:
+            self._overlay.set_state("idle")
 
     # ------------------------------------------------------------------
     # Tray menu actions
@@ -94,6 +100,11 @@ class App:
         self._conf = new_config
         self._settings_window._config = new_config
         self._recorder = Recorder(device=new_config.get("device"))
+        self._transcriber = Transcriber(
+            model_size=new_config["model"],
+            language=new_config.get("language"),
+            initial_prompt=new_config.get("initial_prompt"),
+        )
         if new_config.get("hotkey") != old_hotkey:
             self._hotkey_mgr.restart(new_config["hotkey"])
         if new_config.get("autostart") != old_autostart:
