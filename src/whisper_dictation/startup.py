@@ -19,6 +19,8 @@ def _pythonw_exe() -> str:
 
 
 def _startup_command() -> str:
+    if getattr(sys, 'frozen', False):
+        return f'"{sys.executable}"'
     return f'"{_pythonw_exe()}" -m whisper_dictation'
 
 

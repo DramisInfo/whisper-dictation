@@ -106,10 +106,15 @@ class TrayIcon:
     def set_recording(self, recording: bool) -> None:
         if self._icon is None:
             return
-        self._icon.icon = _make_icon(recording)
-        self._icon.title = (
-            "Whisper Dictation — recording…" if recording else "Whisper Dictation — idle"
-        )
+        new_icon = _make_icon(recording)
+        new_title = "Whisper Dictation — recording…" if recording else "Whisper Dictation — idle"
+
+        def _update() -> None:
+            if self._icon:
+                self._icon.icon = new_icon
+                self._icon.title = new_title
+
+        threading.Timer(0, _update).start()
 
     def notify(self, title: str, message: str) -> None:
         if self._icon is None:
