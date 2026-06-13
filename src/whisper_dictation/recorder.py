@@ -87,7 +87,7 @@ class Recorder:
             self._chunks.append(indata.copy())
             if self._on_audio_level is not None:
                 rms = float(np.sqrt(np.mean(indata ** 2)))
-                self._on_audio_level(min(1.0, rms * 50))
+                self._on_audio_level(min(1.0, rms * 120))
 
     @staticmethod
     def list_input_devices() -> list[str]:

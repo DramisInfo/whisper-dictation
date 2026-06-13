@@ -21,10 +21,10 @@ _DEFAULT_X = 165
 _N_BARS = 6
 _BAR_W = 4
 _BAR_GAP = 2
-_BAR_MAX_H = 22
+_BAR_MAX_H = 40
 _BAR_MIN_H = 2
 _BAR_X0 = 10
-_BAR_BOTTOM = 35
+_BAR_BOTTOM = 46
 
 # ---------------------------------------------------------------------------
 # Win32 always-on-top helpers (Windows only — graceful no-op on other OSes)
@@ -371,8 +371,8 @@ class Overlay:
             if self._state == "recording" and self._bar_ids:
                 level = self._level
                 for i, bid in enumerate(self._bar_ids):
-                    target = level * random.uniform(0.5, 1.5) * _BAR_MAX_H
-                    self._bar_heights[i] = self._bar_heights[i] * 0.6 + target * 0.4
+                    target = level * random.uniform(0.6, 1.4) * _BAR_MAX_H
+                    self._bar_heights[i] = self._bar_heights[i] * 0.35 + target * 0.65
                     h = max(_BAR_MIN_H, min(_BAR_MAX_H, self._bar_heights[i]))
                     x0 = _BAR_X0 + i * (_BAR_W + _BAR_GAP)
                     x1 = x0 + _BAR_W
