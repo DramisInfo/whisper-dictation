@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 import threading
 from typing import Callable, Optional
 
@@ -9,6 +12,9 @@ from PIL import Image, ImageDraw
 import pystray
 
 from . import startup
+from .logger import get_logger, log_path
+
+_log = get_logger(__name__)
 
 
 _ICON_SIZE = 64
@@ -61,6 +67,16 @@ class TrayIcon:
             self._icon.menu = self._build_menu()
             self._icon.update_menu()
 
+    def _open_log_file(self) -> None:
+        try:
+            p = log_path()
+            if sys.platform == "win32":
+                os.startfile(str(p))
+            else:
+                subprocess.Popen(["xdg-open", str(p)])
+        except Exception as exc:
+            _log.warning("Could not open log file: %s", exc)
+
     def _build_menu(self) -> pystray.Menu:
         autostart_label = (
             "Start with Windows ✓" if startup.is_autostart_enabled() else "Start with Windows"
@@ -68,6 +84,7 @@ class TrayIcon:
         return pystray.Menu(
             pystray.MenuItem(autostart_label, lambda icon, item: self._toggle_autostart()),
             pystray.MenuItem("Settings", lambda icon, item: self._on_settings()),
+            pystray.MenuItem("Open Log File", lambda icon, item: self._open_log_file()),
             pystray.MenuItem("Quit", lambda icon, item: self._quit()),
         )
 

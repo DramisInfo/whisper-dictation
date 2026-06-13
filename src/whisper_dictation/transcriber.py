@@ -7,6 +7,10 @@ from typing import Optional
 
 import numpy as np
 
+from .logger import get_logger
+
+_log = get_logger(__name__)
+
 
 class Transcriber:
     def __init__(self, model_size: str = "base", language: Optional[str] = "fr") -> None:
@@ -21,17 +25,14 @@ class Transcriber:
         from . import config as cfg
 
         model_dir = cfg.models_dir()
-        print(
-            f"[transcriber] Loading model '{self._model_size}' "
-            f"(cache: {model_dir}) — first run may download ~150 MB …"
-        )
+        _log.info("Loading model '%s' (cache: %s) — first run may download ~150 MB", self._model_size, model_dir)
         self._model = WhisperModel(
             self._model_size,
             device="cpu",
             compute_type="int8",
             download_root=str(model_dir),
         )
-        print("[transcriber] Model ready.")
+        _log.info("Model '%s' ready", self._model_size)
 
     def transcribe(self, audio: np.ndarray, sample_rate: int) -> str:
         """Return transcribed text, or empty string for silence/errors."""
@@ -40,6 +41,7 @@ class Transcriber:
         self._load_model()
         assert self._model is not None
 
+        _log.info("Transcription started (%.2f s of audio, language=%s)", len(audio) / sample_rate, self._language)
         segments, _info = self._model.transcribe(
             audio,
             language=self._language,
@@ -47,4 +49,5 @@ class Transcriber:
             vad_filter=True,
         )
         text = " ".join(seg.text.strip() for seg in segments).strip()
+        _log.info("Transcription result: %s", (text[:80] + "…") if len(text) > 80 else text)
         return text

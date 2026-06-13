@@ -8,6 +8,10 @@ from typing import Callable, Optional
 from pynput import keyboard as _kb
 from pynput.keyboard import Key, KeyCode
 
+from .logger import get_logger
+
+_log = get_logger(__name__)
+
 # Normalize left/right modifier variants to their generic form
 _MODIFIER_NORMALIZE: dict = {}
 
@@ -78,6 +82,7 @@ class HotkeyManager:
         self._required = _parse_hotkey(self._hotkey)
         self._pressed.clear()
         self._held = False
+        _log.info("Hotkey registered: %s", self._hotkey)
 
         def on_press(key: object) -> None:
             norm = _normalize(key)
@@ -87,6 +92,7 @@ class HotkeyManager:
                     if self._held:
                         return
                     self._held = True
+                _log.debug("Hotkey combo detected: %s", self._hotkey)
                 self._on_press()
 
         def on_release(key: object) -> None:

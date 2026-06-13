@@ -11,6 +11,9 @@ import webbrowser
 from typing import Optional
 
 from . import __version__
+from .logger import get_logger
+
+_log = get_logger(__name__)
 
 _RELEASES_URL = "https://api.github.com/repos/DramisInfo/whisper-dictation/releases/latest"
 
@@ -32,9 +35,12 @@ def check_for_update() -> Optional[dict]:
         if not tag:
             return None
         if _parse_version(tag) > _parse_version(__version__):
+            _log.info("Update available: %s (current: %s)", tag, __version__)
             return release
+        _log.info("No update available (current: %s, latest: %s)", __version__, tag)
         return None
     except Exception:
+        _log.warning("Update check failed", exc_info=True)
         return None
 
 

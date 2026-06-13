@@ -8,6 +8,10 @@ from typing import Optional
 import numpy as np
 import sounddevice as sd
 
+from .logger import get_logger
+
+_log = get_logger(__name__)
+
 _SAMPLE_RATE = 16_000  # Hz — Whisper expects 16 kHz
 _CHANNELS = 1
 _DTYPE = "float32"
@@ -47,6 +51,7 @@ class Recorder:
                 device=self._device,
             )
             self._stream.start()
+            _log.info("Recording started (device=%s)", self._device)
 
     def stop(self) -> np.ndarray:
         """Stop recording and return the captured audio as a 1-D float32 array."""
@@ -59,9 +64,11 @@ class Recorder:
                 self._stream.close()
                 self._stream = None
             if not self._chunks:
+                _log.info("Recording stopped — no audio captured")
                 return np.array([], dtype=np.float32)
             audio = np.concatenate(self._chunks, axis=0).flatten()
             self._chunks = []
+            _log.info("Recording stopped — %.2f seconds captured", len(audio) / _SAMPLE_RATE)
             return audio
 
     def _callback(
@@ -85,6 +92,7 @@ class Recorder:
             devices = sd.query_devices()
             return any(d["max_input_channels"] > 0 for d in devices)
         except Exception:
+            _log.warning("Could not query audio devices", exc_info=True)
             return False
 
     @property

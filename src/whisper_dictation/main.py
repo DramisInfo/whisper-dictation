@@ -10,15 +10,19 @@ from . import config as cfg
 from . import startup
 from . import updater
 from .hotkey import HotkeyManager
+from .logger import get_logger
 from .recorder import Recorder, RecordingError
 from .transcriber import Transcriber
 from .injector import inject
 from .tray import TrayIcon
 from .settings_ui import SettingsWindow
 
+_log = get_logger(__name__)
+
 
 class App:
     def __init__(self) -> None:
+        _log.info("Whisper Dictation starting")
         self._conf = cfg.load()
         if self._conf.get("autostart", True):
             startup.enable_autostart()
@@ -52,6 +56,7 @@ class App:
             self._recorder.start()
             self._tray.set_recording(True)
         except RecordingError as exc:
+            _log.error("Recording error: %s", exc)
             self._tray.set_recording(False)
             self._tray.notify("Whisper Dictation — Error", str(exc))
 
@@ -74,6 +79,7 @@ class App:
             if text:
                 inject(text)
         except Exception as exc:
+            _log.error("Transcription/injection error: %s", exc, exc_info=True)
             self._tray.notify("Whisper Dictation — Transcription Error", str(exc))
 
     # ------------------------------------------------------------------
@@ -84,6 +90,7 @@ class App:
         old_hotkey = self._conf.get("hotkey")
         old_autostart = self._conf.get("autostart")
         cfg.save(new_config)
+        _log.info("Settings saved (hotkey=%s, model=%s)", new_config.get("hotkey"), new_config.get("model"))
         self._conf = new_config
         self._settings_window._config = new_config
         self._recorder = Recorder(device=new_config.get("device"))
@@ -96,6 +103,7 @@ class App:
                 startup.disable_autostart()
 
     def _quit(self) -> None:
+        _log.info("Whisper Dictation stopping")
         self._stopping = True
         self._hotkey_mgr.stop()
 
@@ -120,6 +128,7 @@ def main() -> None:
     except KeyboardInterrupt:
         pass
     except Exception as exc:
+        _log.critical("Fatal error: %s", exc, exc_info=True)
         print(f"Fatal error: {exc}", file=sys.stderr)
         sys.exit(1)
 

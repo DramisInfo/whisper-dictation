@@ -23,6 +23,7 @@ a = Analysis(
     hiddenimports=[
         "whisper_dictation",
         "whisper_dictation.config",
+        "whisper_dictation.logger",
         "whisper_dictation.recorder",
         "whisper_dictation.transcriber",
         "whisper_dictation.injector",
@@ -32,6 +33,7 @@ a = Analysis(
         "whisper_dictation.startup",
         "whisper_dictation.settings_ui",
         "whisper_dictation.main",
+        "requests",
         "faster_whisper",
         "sounddevice",
         "numpy",
