@@ -17,6 +17,7 @@ _DEFAULTS: dict[str, Any] = {
     "hotkey": "right ctrl",
     "model": "base",
     "language": "fr",
+    "autostart": True,
 }
 
 

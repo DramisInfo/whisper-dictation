@@ -7,6 +7,7 @@ import threading
 from typing import Optional
 
 from . import config as cfg
+from . import startup
 from .hotkey import HotkeyManager
 from .recorder import Recorder, RecordingError
 from .transcriber import Transcriber
@@ -17,6 +18,10 @@ from .tray import TrayIcon
 class App:
     def __init__(self) -> None:
         self._conf = cfg.load()
+        if self._conf.get("autostart", True):
+            startup.enable_autostart()
+        else:
+            startup.disable_autostart()
         self._recorder = Recorder()
         self._transcriber = Transcriber(
             model_size=self._conf["model"],

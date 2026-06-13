@@ -42,8 +42,13 @@ A small **white circle** appears in the system tray.
 |---|---|
 | **Hold** Right Ctrl | Red circle appears — microphone is recording |
 | **Release** Right Ctrl | Transcription runs locally; text is pasted into the focused window |
+| **Right-click tray** → Start with Windows ✓ | Toggles auto-startup on/off |
 | **Right-click tray** → Settings | Opens `config.yaml` in Notepad |
 | **Right-click tray** → Quit | Exits the app |
+
+> **Auto-startup:** Enabled by default. The app registers itself under  
+> `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` — no administrator rights required.  
+> Toggle it from the tray menu or set `autostart: false` in `config.yaml`.
 
 > **First run:** The Whisper model (~150 MB for `base`) is downloaded automatically to  
 > `%APPDATA%\whisper-dictation\models\` and cached for all future uses.
@@ -56,6 +61,7 @@ The config file is created automatically at `%APPDATA%\whisper-dictation\config.
 hotkey: "right ctrl"   # Key to hold while speaking
 model: "base"          # tiny | base | small | medium | large-v3
 language: "fr"         # ISO 639-1 code, or null for auto-detect
+autostart: true        # Start automatically at Windows login (HKCU registry)
 ```
 
 After editing, **restart the app** for changes to take effect.
@@ -107,8 +113,13 @@ Une petite **icône blanche** apparaît dans la barre des tâches (zone de notif
 |---|---|
 | **Maintenir** Ctrl droit | Icône rouge — le microphone enregistre |
 | **Relâcher** Ctrl droit | Transcription locale ; le texte est collé dans la fenêtre active |
+| **Clic droit** → Démarrer avec Windows ✓ | Active ou désactive le démarrage automatique |
 | **Clic droit** → Paramètres | Ouvre `config.yaml` dans le Bloc-notes |
 | **Clic droit** → Quitter | Ferme l'application |
+
+> **Démarrage automatique :** Activé par défaut. L'application s'enregistre dans  
+> `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` — aucun droit administrateur requis.  
+> Désactivable via le menu de l'icône ou en définissant `autostart: false` dans `config.yaml`.
 
 > **Premier démarrage :** Le modèle Whisper (~150 Mo pour `base`) est téléchargé automatiquement dans  
 > `%APPDATA%\whisper-dictation\models\` et mis en cache pour les utilisations suivantes.
@@ -121,6 +132,7 @@ Le fichier de configuration est créé automatiquement dans `%APPDATA%\whisper-d
 hotkey: "right ctrl"   # Touche à maintenir pendant la dictée
 model: "base"          # tiny | base | small | medium | large-v3
 language: "fr"         # Code ISO 639-1, ou null pour détection automatique
+autostart: true        # Démarrage automatique à l'ouverture de session (registre HKCU)
 ```
 
 Redémarrez l'application après toute modification.

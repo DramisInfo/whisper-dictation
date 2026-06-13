@@ -11,3 +11,8 @@ model: "base"
 # Transcription language (ISO 639-1 code).
 # Use null to enable automatic language detection.
 language: "fr"
+
+# Launch the app automatically when Windows starts.
+# Uses HKCU\Software\Microsoft\Windows\CurrentVersion\Run — no admin rights needed.
+# Can also be toggled from the right-click tray menu.
+autostart: true

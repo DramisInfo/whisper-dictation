@@ -8,6 +8,8 @@ from typing import Callable, Optional
 from PIL import Image, ImageDraw
 import pystray
 
+from . import startup
+
 
 _ICON_SIZE = 64
 
@@ -36,8 +38,21 @@ class TrayIcon:
         self._on_quit = on_quit
         self._icon: Optional[pystray.Icon] = None
 
+    def _toggle_autostart(self) -> None:
+        if startup.is_autostart_enabled():
+            startup.disable_autostart()
+        else:
+            startup.enable_autostart()
+        if self._icon:
+            self._icon.menu = self._build_menu()
+            self._icon.update_menu()
+
     def _build_menu(self) -> pystray.Menu:
+        autostart_label = (
+            "Start with Windows ✓" if startup.is_autostart_enabled() else "Start with Windows"
+        )
         return pystray.Menu(
+            pystray.MenuItem(autostart_label, lambda icon, item: self._toggle_autostart()),
             pystray.MenuItem("Settings", lambda icon, item: self._on_settings()),
             pystray.MenuItem("Quit", lambda icon, item: self._quit()),
         )
