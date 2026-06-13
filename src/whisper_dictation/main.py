@@ -42,15 +42,15 @@ class App:
             language=self._conf.get("language"),
             initial_prompt=self._conf.get("initial_prompt"),
         )
-        self._settings_window = SettingsWindow(self._conf, self._on_settings_save)
-        self._tray = TrayIcon(
-            on_settings=self._settings_window.show,
-            on_quit=self._quit,
-        )
         self._hotkey_mgr = HotkeyManager(
             hotkey=self._conf["hotkey"],
             on_press=self._on_press,
             on_release=self._on_release,
+        )
+        self._settings_window = SettingsWindow(self._conf, self._on_settings_save, self._hotkey_mgr)
+        self._tray = TrayIcon(
+            on_settings=self._settings_window.show,
+            on_quit=self._quit,
         )
         self._stopping = False
         self._transcribe_thread: Optional[threading.Thread] = None

@@ -41,9 +41,32 @@ _PART_TO_KEY: dict[str, Key] = {
     **{f"f{i}": getattr(Key, f"f{i}") for i in range(1, 13)},
 }
 
+_CAPTURE_MOD_ORDER = ["ctrl", "alt", "shift", "windows"]
+
+_CAPTURE_MOD_MAP: dict = {
+    Key.ctrl: "ctrl", Key.alt: "alt", Key.shift: "shift", Key.cmd: "windows",
+}
+
 
 def _normalize(key: object) -> object:
     return _MODIFIER_NORMALIZE.get(key, key)  # type: ignore[arg-type]
+
+
+def _key_to_token(key: object) -> str:
+    norm = _MODIFIER_NORMALIZE.get(key, key)  # type: ignore[arg-type]
+    if norm in _CAPTURE_MOD_MAP:
+        return _CAPTURE_MOD_MAP[norm]
+    if isinstance(key, KeyCode) and key.char:
+        return key.char.lower()
+    if isinstance(key, Key):
+        return key.name.lower()
+    return str(key)
+
+
+def _combo_from_seen(seen: set) -> str:
+    mods = [k for k in _CAPTURE_MOD_ORDER if k in seen]
+    rest = sorted(k for k in seen if k not in _CAPTURE_MOD_ORDER)
+    return "+".join(mods + rest)
 
 
 def _parse_hotkey(hotkey: str) -> frozenset:
@@ -77,6 +100,28 @@ class HotkeyManager:
         self._pressed: set = set()
         self._required: frozenset = frozenset()
         self._listener: Optional[_kb.Listener] = None
+        self._capture_active = False
+        self._capture_pressed: set = set()
+        self._capture_seen: set = set()
+        self._capture_on_change: Optional[Callable[[str], None]] = None
+        self._capture_on_done: Optional[Callable[[str], None]] = None
+
+    def begin_capture(self, on_change: Callable[[str], None], on_done: Callable[[str], None]) -> None:
+        """Enter capture mode: suppress hotkey activation, collect keys from pynput listener."""
+        self._capture_active = True
+        self._capture_pressed = set()
+        self._capture_seen = set()
+        self._capture_on_change = on_change
+        self._capture_on_done = on_done
+        self._held = False
+        self._pressed.clear()
+
+    def cancel_capture(self) -> None:
+        self._capture_active = False
+        self._capture_pressed = set()
+        self._capture_seen = set()
+        self._capture_on_change = None
+        self._capture_on_done = None
 
     def start(self) -> None:
         self._required = _parse_hotkey(self._hotkey)
@@ -85,6 +130,15 @@ class HotkeyManager:
         _log.info("Hotkey registered: %s", self._hotkey)
 
         def on_press(key: object) -> None:
+            if self._capture_active:
+                token = _key_to_token(key)
+                self._capture_pressed.add(token)
+                self._capture_seen.add(token)
+                combo = _combo_from_seen(self._capture_seen)
+                cb = self._capture_on_change
+                if cb is not None:
+                    cb(combo)
+                return
             norm = _normalize(key)
             self._pressed.add(norm)
             if self._required and self._required.issubset(self._pressed):
@@ -96,6 +150,16 @@ class HotkeyManager:
                 self._on_press()
 
         def on_release(key: object) -> None:
+            if self._capture_active:
+                token = _key_to_token(key)
+                self._capture_pressed.discard(token)
+                if not self._capture_pressed and self._capture_seen:
+                    combo = _combo_from_seen(self._capture_seen)
+                    cb = self._capture_on_done
+                    if cb is not None:
+                        cb(combo)
+                    self.cancel_capture()
+                return
             norm = _normalize(key)
             self._pressed.discard(norm)
             if norm in self._required:
@@ -114,6 +178,7 @@ class HotkeyManager:
             self._listener = None
         self._pressed.clear()
         self._held = False
+        self.cancel_capture()
 
     def restart(self, new_hotkey: str) -> None:
         self.stop()

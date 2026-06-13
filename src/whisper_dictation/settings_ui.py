@@ -5,7 +5,10 @@ from __future__ import annotations
 import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
-from typing import Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional
+
+if TYPE_CHECKING:
+    from .hotkey import HotkeyManager
 
 _MODELS = ["tiny", "base", "small", "medium", "large-v3"]
 
@@ -58,9 +61,15 @@ _FONT_HDR = ("Segoe UI", 9, "bold")
 
 
 class SettingsWindow:
-    def __init__(self, config: dict, on_save: Callable[[dict], None]) -> None:
+    def __init__(
+        self,
+        config: dict,
+        on_save: Callable[[dict], None],
+        hotkey_manager: Optional["HotkeyManager"] = None,
+    ) -> None:
         self._config = config
         self._on_save = on_save
+        self._hotkey_manager = hotkey_manager
         self._lock = threading.Lock()
         self._open = False
         self._root: Optional[tk.Tk] = None
@@ -99,6 +108,8 @@ class SettingsWindow:
             root.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
 
             def close() -> None:
+                if self._hotkey_manager is not None:
+                    self._hotkey_manager.cancel_capture()
                 root.destroy()
 
             root.protocol("WM_DELETE_WINDOW", close)
@@ -139,29 +150,6 @@ class SettingsWindow:
         section("Transcription").pack(anchor="w", padx=16, pady=(14, 2))
 
         # --- Hotkey capture widget ---
-        _capturing = [False]
-        _pressed = set()
-
-        _TK_NAME_MAP = {
-            "Control_L": "ctrl", "Control_R": "ctrl",
-            "Shift_L": "shift", "Shift_R": "shift",
-            "Alt_L": "alt", "Alt_R": "alt",
-            "Super_L": "windows", "Super_R": "windows",
-            "Return": "enter", "BackSpace": "backspace",
-            "Tab": "tab", "Escape": "escape", "space": "space",
-            **{f"F{i}": f"f{i}" for i in range(1, 13)},
-        }
-
-        def _tk_to_name(event: tk.Event) -> str:
-            return _TK_NAME_MAP.get(event.keysym, event.keysym.lower())
-
-        _MOD_ORDER = ["ctrl", "alt", "shift", "windows"]
-
-        def _combo_from_set(keys: set) -> str:
-            mods = [k for k in _MOD_ORDER if k in keys]
-            others = sorted(k for k in keys if k not in _MOD_ORDER)
-            return "+".join(mods + others)
-
         cur_hotkey = self._config.get("hotkey", "ctrl+windows")
         hotkey_var = tk.StringVar(value=cur_hotkey)
 
@@ -176,50 +164,21 @@ class SettingsWindow:
         hk_label.pack(fill="x")
 
         def _start_capture(e=None) -> None:
-            # Use keyboard library in thread to capture Win key combos
-            import keyboard as _kb
-            import threading as _threading
-            if _capturing[0]:
+            if self._hotkey_manager is None:
                 return
-            _capturing[0] = True
-            _pressed.clear()
             hotkey_var.set("Press keys…")
             hk_label.config(fg=_ACCENT)
-            root.focus_set()
 
-            def _capture_thread():
-                try:
-                    combo = _kb.read_hotkey(suppress=False)
-                    # Normalize: keyboard returns e.g. "ctrl+windows" or "windows+ctrl"
-                    parts = [p.strip().lower() for p in combo.split("+")]
-                    # Put modifiers first
-                    mods = [p for p in parts if p in ("ctrl","shift","alt","windows","win")]
-                    rest = [p for p in parts if p not in mods]
-                    normalized = "+".join(mods + rest)
-                    root.after(0, lambda: _apply_capture(normalized))
-                except Exception:
-                    root.after(0, lambda: _apply_capture(cur_hotkey))
+            def on_change(combo: str) -> None:
+                root.after(0, lambda: hotkey_var.set(combo))
 
-            def _apply_capture(combo: str) -> None:
-                _capturing[0] = False
-                hotkey_var.set(combo)
-                hk_label.config(fg=_FG)
-                _pressed.clear()
+            def on_done(combo: str) -> None:
+                root.after(0, lambda: (hotkey_var.set(combo), hk_label.config(fg=_FG)))
 
-            _threading.Thread(target=_capture_thread, daemon=True).start()
-
-        def _on_key_press(e: tk.Event) -> None:  # type: ignore[return]
-            # Fallback tkinter handler — only fires for non-Win keys
-            # The keyboard-lib thread handles the actual capture
-            return "break"  # type: ignore[return-value]
-
-        def _on_key_release(e: tk.Event) -> None:  # type: ignore[return]
-            return "break"  # type: ignore[return-value]
+            self._hotkey_manager.begin_capture(on_change=on_change, on_done=on_done)
 
         for w in (hk_frame, hk_label):
             w.bind("<Button-1>", _start_capture)
-        root.bind("<KeyPress>", _on_key_press)
-        root.bind("<KeyRelease>", _on_key_release)
 
         hint("  Click the box, then press your key combination").pack(anchor="w", padx=16)
 
