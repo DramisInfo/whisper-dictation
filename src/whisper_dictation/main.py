@@ -29,13 +29,19 @@ class App:
             startup.enable_autostart()
         else:
             startup.disable_autostart()
-        self._recorder = Recorder(device=self._conf.get("device"))
+        self._overlay = Overlay(
+            overlay_x=self._conf.get("overlay_x", 165),
+            on_x_change=self._save_overlay_x,
+        )
+        self._recorder = Recorder(
+            device=self._conf.get("device"),
+            on_audio_level=self._overlay.update_level,
+        )
         self._transcriber = Transcriber(
             model_size=self._conf["model"],
             language=self._conf.get("language"),
             initial_prompt=self._conf.get("initial_prompt"),
         )
-        self._overlay = Overlay()
         self._settings_window = SettingsWindow(self._conf, self._on_settings_save)
         self._tray = TrayIcon(
             on_settings=self._settings_window.show,
@@ -92,6 +98,10 @@ class App:
     # Tray menu actions
     # ------------------------------------------------------------------
 
+    def _save_overlay_x(self, x: int) -> None:
+        self._conf["overlay_x"] = x
+        cfg.save(self._conf)
+
     def _on_settings_save(self, new_config: dict) -> None:
         old_hotkey = self._conf.get("hotkey")
         old_autostart = self._conf.get("autostart")
@@ -99,7 +109,10 @@ class App:
         _log.info("Settings saved (hotkey=%s, model=%s)", new_config.get("hotkey"), new_config.get("model"))
         self._conf = new_config
         self._settings_window._config = new_config
-        self._recorder = Recorder(device=new_config.get("device"))
+        self._recorder = Recorder(
+            device=new_config.get("device"),
+            on_audio_level=self._overlay.update_level,
+        )
         self._transcriber = Transcriber(
             model_size=new_config["model"],
             language=new_config.get("language"),

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import threading
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 import sounddevice as sd
@@ -22,8 +22,13 @@ class RecordingError(RuntimeError):
 
 
 class Recorder:
-    def __init__(self, device: str | None = None) -> None:
+    def __init__(
+        self,
+        device: str | None = None,
+        on_audio_level: Optional[Callable[[float], None]] = None,
+    ) -> None:
         self._device = device
+        self._on_audio_level = on_audio_level
         self._lock = threading.Lock()
         self._chunks: list[np.ndarray] = []
         self._stream: Optional[sd.InputStream] = None
@@ -80,6 +85,9 @@ class Recorder:
     ) -> None:
         if self._recording:
             self._chunks.append(indata.copy())
+            if self._on_audio_level is not None:
+                rms = float(np.sqrt(np.mean(indata ** 2)))
+                self._on_audio_level(min(1.0, rms * 12))
 
     @staticmethod
     def list_input_devices() -> list[str]:

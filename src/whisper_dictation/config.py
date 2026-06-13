@@ -20,6 +20,7 @@ _DEFAULTS: dict[str, Any] = {
     "initial_prompt": "Transcription en français. Vocabulaire informatique et technologique.",
     "autostart": True,
     "device": None,
+    "overlay_x": 165,
 }
 
 
