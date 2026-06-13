@@ -150,8 +150,7 @@ class Overlay:
         root.wm_attributes("-alpha", _ALPHA)
         root.configure(bg=_BG_ROOT)
 
-        sh = root.winfo_screenheight()
-        root.geometry(f"{_W}x{_H}+{self._overlay_x}+{sh - _H}")
+        root.geometry(f"{_W}x{_H}+{self._overlay_x}+0")
 
         canvas = tk.Canvas(root, width=_W, height=_H, bg=_BG_ROOT, highlightthickness=0)
         canvas.pack()
@@ -302,8 +301,7 @@ class Overlay:
             return
         dx = event.x_root - self._drag_start_x
         new_x = self._drag_win_x + dx
-        sh = self._root.winfo_screenheight()
-        self._root.geometry(f"{_W}x{_H}+{new_x}+{sh - _H}")
+        self._root.geometry(f"{_W}x{_H}+{new_x}+0")
         self._overlay_x = new_x
 
     def _on_drag_end(self, event) -> None:  # type: ignore[override]
